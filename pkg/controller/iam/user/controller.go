@@ -26,6 +26,8 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
 	"github.com/crossplane/crossplane-runtime/pkg/connection"
@@ -68,8 +70,13 @@ func SetupUser(mgr ctrl.Manager, o controller.Options) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
 		WithOptions(o.ForControllerRuntime()).
-		For(&v1beta1.User{}).
-		Complete(managed.NewReconciler(mgr,
+		For(&v1beta1.User{},
+			builder.WithPredicates(predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				predicate.LabelChangedPredicate{},
+				predicate.AnnotationChangedPredicate{},
+			))).      
+        Complete(managed.NewReconciler(mgr,
 			resource.ManagedKind(v1beta1.UserGroupVersionKind),
 			managed.WithExternalConnecter(&connector{kube: mgr.GetClient(), newClientFn: iam.NewUserClient}),
 			managed.WithInitializers(

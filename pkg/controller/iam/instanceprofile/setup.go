@@ -30,7 +30,9 @@ import (
 	"github.com/crossplane/crossplane-runtime/pkg/meta"
 	"github.com/crossplane/crossplane-runtime/pkg/reconciler/managed"
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
-
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	
 	svcapitypes "github.com/crossplane-contrib/provider-aws/apis/iam/v1alpha1"
 	"github.com/crossplane-contrib/provider-aws/apis/v1alpha1"
 	aws "github.com/crossplane-contrib/provider-aws/pkg/clients"
@@ -59,7 +61,12 @@ func SetupInstanceProfile(mgr ctrl.Manager, o controller.Options) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
 		WithOptions(o.ForControllerRuntime()).
-		For(&svcapitypes.InstanceProfile{}).
+		For(&svcapitypes.InstanceProfile{},
+			builder.WithPredicates(predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				predicate.LabelChangedPredicate{},
+				predicate.AnnotationChangedPredicate{},
+			))).
 		Complete(managed.NewReconciler(mgr,
 			resource.ManagedKind(svcapitypes.InstanceProfileGroupVersionKind),
 			managed.WithExternalConnecter(&connector{kube: mgr.GetClient(), opts: opts}),
